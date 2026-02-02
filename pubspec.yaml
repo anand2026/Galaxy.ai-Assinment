@@ -1,0 +1,38 @@
+name: pinterest_clone
+description: "Pinterest Clone - A pixel-perfect Pinterest clone built with Flutter"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.9.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # Core packages as per assignment requirements
+  flutter_riverpod: ^2.6.1        # State Management
+  go_router: ^14.8.1               # Navigation
+  dio: ^5.8.0                       # Networking
+  cached_network_image: ^3.4.1    # Image Caching
+  shimmer: ^3.0.0                  # Loading Effects
+  flutter_staggered_grid_view: ^0.7.0  # Grid Layout
+  clerk_flutter: ^0.0.13-beta          # Authentication (Required)
+  
+  # Additional utilities
+  cupertino_icons: ^1.0.8
+  google_fonts: ^6.2.1            # Typography
+  flutter_svg: ^2.0.17            # SVG support
+  equatable: ^2.0.7               # Value equality
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/images/
+    - assets/icons/
