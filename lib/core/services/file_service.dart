@@ -1,6 +1,4 @@
 /// File service for media handling
-
-/// File service for media handling
 /// Manages file operations for images, videos, and other media
 class FileService {
   /// Get file size in human readable format

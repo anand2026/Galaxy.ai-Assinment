@@ -1,5 +1,5 @@
-/// Authentication use cases for Clerk integration
-/// These provide the business logic layer for authentication operations
+// Authentication use cases for Clerk integration
+// These provide the business logic layer for authentication operations
 
 /// Use case for signing in with email
 class SignInWithEmailUseCase {
