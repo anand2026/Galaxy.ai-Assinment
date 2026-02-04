@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../providers/photo_providers.dart';
 import '../../widgets/masonry_grid.dart';
@@ -46,27 +47,44 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         backgroundColor: AppColors.background,
         elevation: 0,
         centerTitle: true,
-        title: Container(
-          decoration: BoxDecoration(
-            color: AppColors.background,
-            borderRadius: BorderRadius.circular(30),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _HeaderPill(
-                text: 'All',
-                isSelected: _selectedTabIndex == 0,
-                onTap: () => setState(() => _selectedTabIndex = 0),
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 12),
+          child: Center(
+            child: Container(
+              width: 32,
+              height: 32,
+              decoration: const BoxDecoration(
+                color: AppColors.primary,
+                shape: BoxShape.circle,
               ),
-              const SizedBox(width: 8),
-              _HeaderPill(
-                text: 'For You',
-                isSelected: _selectedTabIndex == 1,
-                onTap: () => setState(() => _selectedTabIndex = 1),
+              child: const Center(
+                child: Text(
+                  'P',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
-            ],
+            ),
           ),
+        ),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _HeaderPill(
+              text: 'All',
+              isSelected: _selectedTabIndex == 0,
+              onTap: () => setState(() => _selectedTabIndex = 0),
+            ),
+            const SizedBox(width: 8),
+            _HeaderPill(
+              text: 'For You',
+              isSelected: _selectedTabIndex == 1,
+              onTap: () => setState(() => _selectedTabIndex = 1),
+            ),
+          ],
         ),
       ),
       body: _buildBody(state),
@@ -103,7 +121,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         onLoadMore: () => ref.read(homeFeedProvider.notifier).loadMore(),
         onPinTap: (photo) {
           ref.read(selectedPhotoProvider.notifier).state = photo;
-          // Navigate to detail
+          context.push('/pin/${photo.id}', extra: photo);
         },
         onPinSave: (photo) {
           // Handle save
