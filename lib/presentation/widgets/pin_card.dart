@@ -143,14 +143,14 @@ class _PinCardState extends State<PinCard> with SingleTickerProviderStateMixin {
                         ),
                       ),
 
-                    // Save button
+                    // Save button - always visible on mobile, hover on desktop
                     if (widget.showOverlay)
                       Positioned(
                         top: 8,
                         right: 8,
                         child: AnimatedOpacity(
                           duration: const Duration(milliseconds: 200),
-                          opacity: _isHovered ? 1.0 : 0.0,
+                          opacity: _isHovered || _isMobile(context) ? 1.0 : 0.0,
                           child: _SaveButton(
                             isSaved: _isSaved,
                             onTap: _handleSave,
@@ -254,6 +254,12 @@ class _PinCardState extends State<PinCard> with SingleTickerProviderStateMixin {
     } catch (e) {
       return AppColors.shimmerBase;
     }
+  }
+
+  bool _isMobile(BuildContext context) {
+    // Check if the device is touch-based (mobile/tablet)
+    final platform = Theme.of(context).platform;
+    return platform == TargetPlatform.iOS || platform == TargetPlatform.android;
   }
 
   void _showLongPressMenu(BuildContext context) {
