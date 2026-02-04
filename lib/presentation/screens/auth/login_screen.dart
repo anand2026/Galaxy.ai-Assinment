@@ -7,11 +7,10 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../providers/photo_providers.dart';
-// Clerk integration: import 'package:clerk_flutter/clerk_flutter.dart';
-// Note: Configure Clerk in main.dart with ClerkAuth.initialize(publishableKey: 'your_key')
+import '../../providers/auth_providers.dart';
 
 /// Pinterest-style login screen with scrolling background
-/// Supports Clerk authentication for production use
+/// Supports Firebase authentication for production use
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -23,6 +22,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final ScrollController _scrollController = ScrollController();
   Timer? _scrollTimer;
   final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  bool _isSignUp = false;
+  bool _showPassword = false;
 
   @override
   void initState() {
@@ -52,16 +54,82 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _scrollTimer?.cancel();
     _scrollController.dispose();
     _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
-  void _handleLogin() {
+  Future<void> _handleEmailAuth() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (email.isEmpty) {
+      _showError('Please enter your email');
+      return;
+    }
+
+    if (password.isEmpty) {
+      _showError('Please enter your password');
+      return;
+    }
+
+    if (password.length < 6) {
+      _showError('Password must be at least 6 characters');
+      return;
+    }
+
+    final authNotifier = ref.read(authNotifierProvider.notifier);
+    bool success;
+
+    if (_isSignUp) {
+      success = await authNotifier.createAccount(email, password);
+    } else {
+      success = await authNotifier.signInWithEmail(email, password);
+    }
+
+    if (success && mounted) {
+      context.go('/home');
+    } else {
+      final state = ref.read(authNotifierProvider);
+      if (state.error != null) {
+        _showError(state.error!);
+      }
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    final authNotifier = ref.read(authNotifierProvider.notifier);
+    final success = await authNotifier.signInWithGoogle();
+
+    if (success && mounted) {
+      context.go('/home');
+    } else {
+      final state = ref.read(authNotifierProvider);
+      if (state.error != null) {
+        _showError(state.error!);
+      }
+    }
+  }
+
+  void _handleSkipLogin() {
+    // Allow users to skip login for demo purposes
     context.go('/home');
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final photoState = ref.watch(homeFeedProvider);
+    final authState = ref.watch(authNotifierProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -73,12 +141,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: IgnorePointer(
               child: MasonryGridView.count(
                 controller: _scrollController,
-                crossAxisCount: 3, // More dense for background
+                crossAxisCount: 3,
                 mainAxisSpacing: 8,
                 crossAxisSpacing: 8,
-                itemCount: photoState.photos.length * 3, // Duplicate for loop
+                itemCount: photoState.photos.length * 3,
                 itemBuilder: (context, index) {
-                  // Cycle through photos
                   if (photoState.photos.isEmpty) return const SizedBox();
                   final photo =
                       photoState.photos[index % photoState.photos.length];
@@ -109,99 +176,179 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
           // Content
           SafeArea(
-            child: Padding(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Spacer(),
-                  // Logo
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: const BoxDecoration(
-                      color: AppColors.primary,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'P',
-                        style: TextStyle(
-                          color: AppColors.white,
-                          fontSize: 40,
-                          fontWeight: FontWeight.bold,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight:
+                      MediaQuery.of(context).size.height -
+                      MediaQuery.of(context).padding.top -
+                      MediaQuery.of(context).padding.bottom,
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(height: 60),
+                    // Logo
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: const BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Center(
+                        child: Text(
+                          'P',
+                          style: TextStyle(
+                            color: AppColors.white,
+                            fontSize: 40,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
+                    const SizedBox(height: AppSpacing.lg),
 
-                  Text(
-                    'Welcome to Pinterest',
-                    style: AppTypography.headlineLarge,
-                    textAlign: TextAlign.center,
-                  ),
-
-                  const SizedBox(height: AppSpacing.xxl),
-
-                  // Email Field
-                  TextField(
-                    controller: _emailController,
-                    decoration: const InputDecoration(
-                      hintText: 'Email address',
-                      prefixIcon: Icon(Icons.email_outlined),
+                    Text(
+                      'Welcome to Pinterest',
+                      style: AppTypography.headlineLarge,
+                      textAlign: TextAlign.center,
                     ),
-                  ),
 
-                  const SizedBox(height: AppSpacing.md),
+                    const SizedBox(height: AppSpacing.xxl),
 
-                  // Continue Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: _handleLogin,
-                      child: const Text('Continue'),
-                    ),
-                  ),
-
-                  const SizedBox(height: AppSpacing.xl),
-
-                  // Divider
-                  const Row(
-                    children: [
-                      Expanded(child: Divider()),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16),
-                        child: Text('OR'),
+                    // Email Field
+                    TextField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(
+                        hintText: 'Email address',
+                        prefixIcon: Icon(Icons.email_outlined),
                       ),
-                      Expanded(child: Divider()),
-                    ],
-                  ),
+                    ),
 
-                  const SizedBox(height: AppSpacing.xl),
+                    const SizedBox(height: AppSpacing.md),
 
-                  // Social Buttons
-                  _SocialButton(
-                    label: 'Continue with Facebook',
-                    color: const Color(0xFF1877F2),
-                    onTap: _handleLogin,
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  _SocialButton(
-                    label: 'Continue with Google',
-                    color: AppColors.textSecondary,
-                    isOutlined: true,
-                    onTap: _handleLogin,
-                  ),
-                  const Spacer(),
-                  Text(
-                    'By continuing, you agree to Pinterest\'s Terms of Service and open Privacy Policy.',
-                    textAlign: TextAlign.center,
-                    style: AppTypography.bodySmall,
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                ],
+                    // Password Field
+                    TextField(
+                      controller: _passwordController,
+                      obscureText: !_showPassword,
+                      decoration: InputDecoration(
+                        hintText: 'Password',
+                        prefixIcon: const Icon(Icons.lock_outlined),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _showPassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                          ),
+                          onPressed: () {
+                            setState(() => _showPassword = !_showPassword);
+                          },
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: AppSpacing.md),
+
+                    // Sign Up Toggle
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          _isSignUp
+                              ? 'Already have an account?'
+                              : "Don't have an account?",
+                          style: AppTypography.bodySmall,
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            setState(() => _isSignUp = !_isSignUp);
+                          },
+                          child: Text(
+                            _isSignUp ? 'Log in' : 'Sign up',
+                            style: AppTypography.bodySmall.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: AppSpacing.md),
+
+                    // Continue Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: authState.isLoading
+                            ? null
+                            : _handleEmailAuth,
+                        child: authState.isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Text(_isSignUp ? 'Sign up' : 'Continue'),
+                      ),
+                    ),
+
+                    const SizedBox(height: AppSpacing.xl),
+
+                    // Divider
+                    const Row(
+                      children: [
+                        Expanded(child: Divider()),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16),
+                          child: Text('OR'),
+                        ),
+                        Expanded(child: Divider()),
+                      ],
+                    ),
+
+                    const SizedBox(height: AppSpacing.xl),
+
+                    // Google Button
+                    _SocialButton(
+                      label: 'Continue with Google',
+                      icon: Icons.g_mobiledata,
+                      color: AppColors.textSecondary,
+                      isOutlined: true,
+                      isLoading: authState.isLoading,
+                      onTap: _handleGoogleSignIn,
+                    ),
+
+                    const SizedBox(height: AppSpacing.md),
+
+                    // Skip Button (for demo)
+                    TextButton(
+                      onPressed: _handleSkipLogin,
+                      child: Text(
+                        'Skip for now',
+                        style: AppTypography.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: AppSpacing.xl),
+
+                    Text(
+                      'By continuing, you agree to Pinterest\'s Terms of Service and Privacy Policy.',
+                      textAlign: TextAlign.center,
+                      style: AppTypography.bodySmall,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                  ],
+                ),
               ),
             ),
           ),
@@ -213,14 +360,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
 class _SocialButton extends StatelessWidget {
   final String label;
+  final IconData? icon;
   final Color color;
   final bool isOutlined;
+  final bool isLoading;
   final VoidCallback onTap;
 
   const _SocialButton({
     required this.label,
+    this.icon,
     required this.color,
     this.isOutlined = false,
+    this.isLoading = false,
     required this.onTap,
   });
 
@@ -230,30 +381,32 @@ class _SocialButton extends StatelessWidget {
       width: double.infinity,
       height: 48,
       child: isOutlined
-          ? OutlinedButton(
-              onPressed: onTap,
+          ? OutlinedButton.icon(
+              onPressed: isLoading ? null : onTap,
+              icon: icon != null ? Icon(icon, size: 24) : const SizedBox(),
               style: OutlinedButton.styleFrom(
                 side: BorderSide(color: AppColors.border),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(24),
                 ),
               ),
-              child: Text(
+              label: Text(
                 label,
                 style: AppTypography.button.copyWith(
                   color: AppColors.textPrimary,
                 ),
               ),
             )
-          : ElevatedButton(
-              onPressed: onTap,
+          : ElevatedButton.icon(
+              onPressed: isLoading ? null : onTap,
+              icon: icon != null ? Icon(icon, size: 24) : const SizedBox(),
               style: ElevatedButton.styleFrom(
                 backgroundColor: color,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(24),
                 ),
               ),
-              child: Text(label),
+              label: Text(label),
             ),
     );
   }
