@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'router/app_router.dart';
 
@@ -9,14 +10,16 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize Firebase
-  // Note: You need to run `flutterfire configure` to generate firebase_options.dart
-  // For now, we'll try to initialize and catch errors gracefully
   try {
-    await Firebase.initializeApp();
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
   } catch (e) {
     // Firebase not configured yet - app will still work with "Skip" option
     debugPrint('Firebase initialization failed: $e');
-    debugPrint('To enable authentication, run: flutterfire configure');
+    debugPrint(
+      'To enable authentication, update lib/firebase_options.dart with your Firebase config',
+    );
   }
 
   // Set preferred orientations
